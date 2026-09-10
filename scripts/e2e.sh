@@ -20,7 +20,6 @@ wait_for() { # url
 "$BIN/ra-fakehost" --port "$GS_PORT" --username admin --password admin > "$TMP/fake.log" 2>&1 &
 wait_for "http://127.0.0.1:$RV_PORT/v1/health"
 wait_for "http://127.0.0.1:$GS_PORT/serverinfo"
-wait_for "http://127.0.0.1:$((GS_PORT+1))/api/login" || true
 
 "$BIN/ra-host" init --rendezvous "http://127.0.0.1:$RV_PORT" \
   --apollo-url "http://127.0.0.1:$((GS_PORT+1))" --apollo-username admin --apollo-password admin \
