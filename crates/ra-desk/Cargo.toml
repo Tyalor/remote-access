@@ -1,0 +1,20 @@
+[package]
+name = "ra-desk"
+description = "RustDesk-style desktop window: your ID and password on the left, connect-by-ID on the right, Moonlight does the streaming"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ra-proto = { path = "../ra-proto" }
+ra-client = { path = "../ra-client" }
+ra-host = { path = "../ra-host" }
+eframe = { version = "0.31", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
+egui = "0.31"
+tokio = { workspace = true }
+reqwest = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+arboard = "3"

@@ -1,10 +1,6 @@
-mod agent;
-mod apollo;
-mod config;
-
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use config::Config;
+use ra_host::{agent, apollo, config, Config};
 use std::path::PathBuf;
 
 /// remote-access host agent. Runs next to Apollo and gives it a RustDesk-style

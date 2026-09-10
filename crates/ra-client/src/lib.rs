@@ -7,4 +7,4 @@ pub mod moonlight;
 pub mod session;
 
 pub use config::ClientConfig;
-pub use session::{Resolved, Session};
+pub use session::{Prepared, Resolved, Session};

@@ -113,6 +113,13 @@ impl Moonlight {
         Ok(status)
     }
 
+    /// Spawn the stream and hand back the child so a UI can disconnect it.
+    pub fn spawn_stream(&self, host: &str, app: &str, extra: &[String]) -> Result<Child> {
+        let mut c = self.cmd();
+        c.args(["stream", host, app]).args(extra);
+        c.spawn().with_context(|| format!("running {}", self.bin.display()))
+    }
+
     pub async fn quit(&self, host: &str) -> Result<()> {
         self.cmd().args(["quit", host]).status().await?;
         Ok(())

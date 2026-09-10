@@ -42,6 +42,18 @@ pub struct Session {
     http: reqwest::Client,
     gs: GsHttp,
     pub on_event: Box<dyn Fn(Event) + Send + Sync>,
+    /// When false, a missing password is an error instead of a terminal prompt.
+    pub interactive: bool,
+}
+
+/// Everything needed to start streaming: the host is reachable and paired.
+#[derive(Debug, Clone)]
+pub struct Prepared {
+    pub id: String,
+    pub host: String,
+    pub app: String,
+    pub apps: Vec<String>,
+    pub resolved: Resolved,
 }
 
 fn rank(kind: &str) -> u8 {
@@ -62,6 +74,7 @@ impl Session {
             http: reqwest::Client::builder().timeout(Duration::from_secs(45)).build()?,
             gs: GsHttp::new(identity)?,
             on_event: Box::new(|_| {}),
+            interactive: true,
         })
     }
 
@@ -213,24 +226,21 @@ impl Session {
         }
     }
 
-    /// Full RustDesk-style flow with the Moonlight binary as the media client.
-    pub async fn connect(
+    /// Resolve, pair if needed (via the Moonlight binary), and pick an app.
+    pub async fn prepare(
         &mut self,
         id: &str,
         password: Option<String>,
         app: Option<String>,
         remember_password: bool,
         config_path: &std::path::Path,
-        extra_stream_args: &[String],
-    ) -> Result<std::process::ExitStatus> {
-        let bin = crate::moonlight::find_moonlight(self.cfg.moonlight_path.as_deref())
-            .ok_or_else(|| anyhow!("Moonlight not found; install it or set moonlight_path / MOONLIGHT_BIN"))?;
-        let ml = Moonlight::new(bin);
+    ) -> Result<Prepared> {
+        let ml = self.moonlight()?;
         let resolved = self.resolve(id).await?;
         let host = resolved.moonlight_host();
 
-        let paired_apps = ml.list(&host).await.ok();
-        if paired_apps.is_some() {
+        let mut apps = ml.list(&host).await.ok();
+        if apps.is_some() {
             self.emit(Event::AlreadyPaired);
         } else {
             let h1 = self.h1_for(id, &resolved.info.password_salt, password)?;
@@ -250,23 +260,47 @@ impl Session {
                 entry.password_h1 = Some(h1);
                 entry.password_salt = Some(resolved.info.password_salt.clone());
             }
+            apps = ml.list(&host).await.ok();
         }
+        let apps = apps.unwrap_or_default();
         let entry = self.cfg.hosts.entry(id.into()).or_default();
         entry.name = resolved.info.name.clone();
         entry.last_endpoint = Some(host.clone());
         let app = match app.or_else(|| entry.last_app.clone()) {
             Some(a) => a,
-            None => {
-                let apps = paired_apps.unwrap_or(ml.list(&host).await.unwrap_or_default());
-                apps.iter().find(|a| a.eq_ignore_ascii_case("desktop")).cloned().or_else(|| apps.first().cloned()).unwrap_or_else(|| "Desktop".into())
-            }
+            None => apps
+                .iter()
+                .find(|a| a.eq_ignore_ascii_case("desktop"))
+                .cloned()
+                .or_else(|| apps.first().cloned())
+                .unwrap_or_else(|| "Desktop".into()),
         };
         entry.last_app = Some(app.clone());
         self.cfg.save(config_path)?;
-        self.emit(Event::Streaming(app.clone()));
+        Ok(Prepared { id: id.into(), host, app, apps, resolved })
+    }
+
+    pub fn moonlight(&self) -> Result<Moonlight> {
+        let bin = crate::moonlight::find_moonlight(self.cfg.moonlight_path.as_deref())
+            .ok_or_else(|| anyhow!("Moonlight not found; install it or set moonlight_path / MOONLIGHT_BIN"))?;
+        Ok(Moonlight::new(bin))
+    }
+
+    /// Full RustDesk-style flow with the Moonlight binary as the media client.
+    pub async fn connect(
+        &mut self,
+        id: &str,
+        password: Option<String>,
+        app: Option<String>,
+        remember_password: bool,
+        config_path: &std::path::Path,
+        extra_stream_args: &[String],
+    ) -> Result<std::process::ExitStatus> {
+        let p = self.prepare(id, password, app, remember_password, config_path).await?;
+        self.emit(Event::Streaming(p.app.clone()));
         let mut args = self.cfg.stream_args.clone();
         args.extend_from_slice(extra_stream_args);
-        ml.stream(&host, &app, &args).await
+        self.moonlight()?.stream(&p.host, &p.app, &args).await
     }
 
     /// Native pairing with this crate's own identity (no Moonlight needed);
@@ -313,6 +347,9 @@ impl Session {
             if s == salt {
                 return Ok(h1.clone());
             }
+        }
+        if !self.interactive {
+            bail!("password required");
         }
         let p = rpassword::prompt_password(format!("Password for {id}: "))?;
         Ok(password_h1(&p, salt))
