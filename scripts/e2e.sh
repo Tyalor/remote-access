@@ -11,9 +11,16 @@ export RA_HOME="$TMP/client" RA_HOST_CONFIG="$TMP/host.toml" RUST_LOG=${RUST_LOG
 RV_PORT=${RV_PORT:-21999}
 GS_PORT=${GS_PORT:-47989}
 
+wait_for() { # url
+  for _ in $(seq 1 120); do curl -fs "$1" >/dev/null 2>&1 && return 0; sleep 0.5; done
+  echo "timeout waiting for $1"; return 1
+}
+
 "$BIN/ra-rendezvous" --listen "127.0.0.1:$RV_PORT" > "$TMP/rv.log" 2>&1 &
 "$BIN/ra-fakehost" --port "$GS_PORT" --username admin --password admin > "$TMP/fake.log" 2>&1 &
-sleep 1
+wait_for "http://127.0.0.1:$RV_PORT/v1/health"
+wait_for "http://127.0.0.1:$GS_PORT/serverinfo"
+wait_for "http://127.0.0.1:$((GS_PORT+1))/api/login" || true
 
 "$BIN/ra-host" init --rendezvous "http://127.0.0.1:$RV_PORT" \
   --apollo-url "http://127.0.0.1:$((GS_PORT+1))" --apollo-username admin --apollo-password admin \
@@ -21,7 +28,7 @@ sleep 1
 ID=$("$BIN/ra-host" id | tr -d ' ')
 echo "host id: $ID"
 "$BIN/ra-host" run > "$TMP/host.log" 2>&1 &
-sleep 1
+for _ in $(seq 1 60); do grep -q "host online" "$TMP/host.log" && break; sleep 0.5; done
 
 "$BIN/ra" config --rendezvous "http://127.0.0.1:$RV_PORT" > /dev/null
 "$BIN/ra" info "$ID" | tee "$TMP/info.log"
