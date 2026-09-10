@@ -1,0 +1,10 @@
+/target
+**/target
+*.log
+.DS_Store
+/dist
+/.idea
+/.vscode
+*.pem
+*.key
+/data

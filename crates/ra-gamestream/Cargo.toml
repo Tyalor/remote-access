@@ -1,0 +1,27 @@
+[package]
+name = "ra-gamestream"
+description = "Rust client for the Moonlight/Sunshine/Apollo GameStream HTTP protocol: identity, serverinfo, pairing, app list"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+reqwest = { workspace = true }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-pki-types = "1"
+rustls-pemfile = "2"
+thiserror = { workspace = true }
+tracing = { workspace = true }
+sha2 = { workspace = true }
+aes = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
+rsa = { workspace = true }
+rcgen = { workspace = true }
+x509-parser = { workspace = true }
+roxmltree = "0.20"
+time = "0.3"
+signature = "2"
+serde = { workspace = true }

@@ -1,0 +1,12 @@
+[submodule "upstream/apollo"]
+	path = upstream/apollo
+	url = https://github.com/Tyalor/Apollo.git
+[submodule "upstream/moonlight-qt"]
+	path = upstream/moonlight-qt
+	url = https://github.com/Tyalor/moonlight-qt.git
+[submodule "upstream/rustdesk"]
+	path = upstream/rustdesk
+	url = https://github.com/Tyalor/rustdesk.git
+[submodule "upstream/sunshine"]
+	path = upstream/sunshine
+	url = https://github.com/Tyalor/Sunshine.git

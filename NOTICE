@@ -1,0 +1,14 @@
+remote-access combines and builds on four upstream projects, each vendored as a
+git submodule under upstream/ and forked under https://github.com/Tyalor:
+
+  upstream/sunshine      Sunshine game-stream host GPL-3.0    LizardByte/Sunshine
+  upstream/apollo        Apollo (Sunshine fork)    GPL-3.0    ClassicOldSong/Apollo
+  upstream/moonlight-qt  Moonlight Qt client      GPL-3.0     moonlight-stream/moonlight-qt
+  upstream/rustdesk      RustDesk                 AGPL-3.0    rustdesk/rustdesk
+
+Original code in crates/ is licensed under GPL-3.0-only (see LICENSE). The
+Rust crates reimplement the NVIDIA GameStream pairing/launch protocol as
+documented by Moonlight and Sunshine; they do not link RustDesk code. The
+RustDesk fork is vendored for its UI/UX design reference and for optional
+reuse of its file-transfer and clipboard components; any binary that links
+RustDesk code is subject to AGPL-3.0.
