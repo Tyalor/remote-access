@@ -25,3 +25,6 @@ roxmltree = "0.20"
 time = "0.3"
 signature = "2"
 serde = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }

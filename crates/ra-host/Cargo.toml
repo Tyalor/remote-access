@@ -1,7 +1,23 @@
 [package]
 name = "ra-host"
+description = "Host agent: publishes a 9-digit ID, verifies passwords, and completes Moonlight pairing through Apollo's web API"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
+ra-proto = { path = "../ra-proto" }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+toml = { workspace = true }
+directories = { workspace = true }
+if-addrs = "0.13"
+rpassword = "7"
+hostname = "0.4"

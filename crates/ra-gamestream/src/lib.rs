@@ -15,6 +15,7 @@ pub mod http;
 pub mod identity;
 pub mod pairing;
 pub mod serverinfo;
+pub mod testing;
 pub mod xml;
 
 pub use apps::App;

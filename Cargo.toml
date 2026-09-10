@@ -6,6 +6,7 @@ members = [
     "crates/ra-rendezvous",
     "crates/ra-host",
     "crates/ra-client",
+    "crates/ra-fakehost",
 ]
 
 [workspace.package]

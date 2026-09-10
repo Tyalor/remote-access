@@ -1,7 +1,28 @@
 [package]
 name = "ra-rendezvous"
+description = "ID / rendezvous server: maps 9-digit host IDs to Apollo endpoints and brokers pairing requests"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "ra-rendezvous"
+path = "src/main.rs"
 
 [dependencies]
+ra-proto = { path = "../ra-proto" }
+tokio = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+reqwest = { workspace = true }
