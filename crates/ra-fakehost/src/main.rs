@@ -144,7 +144,10 @@ async fn api_pin(State(app): State<App>, headers: HeaderMap, Json(v): Json<serde
     let mut inner = app.inner.lock().await;
     match inner.parked.take() {
         Some((_q, tx)) => {
-            let _ = tx.send((pin, name));
+            // A stale entry (client went away) behaves like Apollo: the PIN is
+            // consumed by a session that can never finish.
+            let live = tx.send((pin, name)).is_ok();
+            tracing::info!(live, "PIN delivered to parked session");
             (StatusCode::OK, Json(serde_json::json!({"status": true})))
         }
         None => (StatusCode::OK, Json(serde_json::json!({"status": false}))),

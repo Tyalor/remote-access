@@ -219,28 +219,32 @@ impl Agent {
         let before: HashSet<String> = self.apollo.list_clients().await?.into_iter().map(|c| c.uuid).collect();
 
         // Moonlight's getservercert parks on the host until a PIN is posted.
-        // Apollo answers {"status":false} while nothing is parked.
+        // Apollo answers {"status":false} while nothing is parked, and feeds
+        // the PIN to the *first* parked session, which may be a stale one
+        // left by an aborted attempt. So keep re-delivering the PIN whenever
+        // Apollo has something parked until our client actually shows up.
         let start = Instant::now();
-        loop {
-            if self.apollo.submit_pin(&pin, &name).await? {
-                break;
-            }
-            if start.elapsed() > PIN_WAIT {
-                anyhow::bail!("timed out waiting for the client's pairing request to reach Apollo");
-            }
-            tokio::time::sleep(Duration::from_millis(500)).await;
-        }
-        tracing::info!(device = %name, "PIN delivered to Apollo");
-
-        // Wait for the new client to appear, then apply permissions.
-        let start = Instant::now();
+        let mut delivered = 0u32;
+        let mut last_delivery: Option<Instant> = None;
         let new_client = loop {
-            let clients = self.apollo.list_clients().await?;
-            if let Some(c) = clients.into_iter().find(|c| !before.contains(&c.uuid)) {
-                break c;
+            if start.elapsed() > PIN_WAIT + CLIENT_APPEAR_WAIT {
+                anyhow::bail!(if delivered == 0 {
+                    "timed out waiting for the client's pairing request to reach Apollo"
+                } else {
+                    "client never completed pairing with Apollo (wrong PIN or aborted)"
+                });
             }
-            if start.elapsed() > CLIENT_APPEAR_WAIT {
-                anyhow::bail!("client never completed pairing with Apollo (wrong PIN or aborted)");
+            let due = last_delivery.map(|t| t.elapsed() >= Duration::from_secs(5)).unwrap_or(true);
+            if due && self.apollo.submit_pin(&pin, &name).await? {
+                delivered += 1;
+                last_delivery = Some(Instant::now());
+                tracing::info!(device = %name, attempt = delivered, "PIN delivered to Apollo");
+            }
+            if delivered > 0 {
+                let clients = self.apollo.list_clients().await?;
+                if let Some(c) = clients.into_iter().find(|c| !before.contains(&c.uuid)) {
+                    break c;
+                }
             }
             tokio::time::sleep(Duration::from_millis(500)).await;
         };
