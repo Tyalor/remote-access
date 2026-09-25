@@ -40,7 +40,7 @@ remote-access collapses that to: enter ID, enter password, press Connect.
 * **`crates/ra-rendezvous`** — HTTP/JSON ID server. Persists registrations; pair requests are in memory.
 * **`crates/ra-host`** — host agent. Registers, heartbeats, long-polls for pair requests, verifies the password, delivers the PIN to Apollo (`POST /api/pin`), then applies the configured permission mask (`POST /api/clients/update`).
 * **`crates/ra-client`** — `ra` CLI and the library the GUI uses. Resolves an ID, probes every advertised endpoint in parallel, pairs, launches `moonlight stream`.
-* **`crates/ra-desk`** — egui desktop window shaped like RustDesk's home screen, with a session panel while streaming.
+* **`crates/ra-desk`** — the single app. Embeds the host agent (guarded by a loopback-port lock so the GUI and the `--headless` background service never both register), a first-run wizard that finds Apollo and checks its credentials, on-screen ID/password with regenerate, a "start with system" toggle (launchd / systemd --user / HKCU Run), the connect panel, and a session panel while streaming.
 * **`crates/ra-fakehost`** — simulated Apollo for `scripts/e2e.sh`.
 
 ## Pairing flow, step by step

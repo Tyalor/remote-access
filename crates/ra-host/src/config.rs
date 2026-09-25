@@ -43,6 +43,14 @@ pub struct Config {
     #[serde(default)]
     pub password_h1: Option<String>,
     pub password_salt: String,
+    /// The password in clear, kept only so the desktop app can show it the
+    /// way RustDesk shows its one-time password. `None` for passwords the
+    /// user typed and chose not to display. File is mode 0600.
+    #[serde(default)]
+    pub password_display: Option<String>,
+    /// Launch the host agent when the desktop app starts.
+    #[serde(default = "default_true")]
+    pub autostart_agent: bool,
     /// Apollo web UI, default `https://127.0.0.1:47990`.
     pub apollo_url: String,
     pub apollo_username: String,
@@ -102,6 +110,8 @@ impl Config {
             name: hostname::get().ok().and_then(|h| h.into_string().ok()).unwrap_or_else(|| "Apollo Host".into()),
             password_h1: None,
             password_salt: ra_proto::random_salt(16),
+            password_display: None,
+            autostart_agent: true,
             apollo_url: "https://127.0.0.1:47990".into(),
             apollo_username,
             apollo_password,
@@ -116,5 +126,22 @@ impl Config {
     pub fn set_password(&mut self, password: &str) {
         self.password_salt = ra_proto::random_salt(16);
         self.password_h1 = Some(ra_proto::password_h1(password, &self.password_salt));
+        self.password_display = None;
     }
+
+    /// Set a fresh random password and keep it displayable. Returns it.
+    pub fn set_random_password(&mut self) -> String {
+        let pw = random_password();
+        self.set_password(&pw);
+        self.password_display = Some(pw.clone());
+        pw
+    }
+}
+
+/// 8 chars from an unambiguous alphabet (no 0/O, 1/l/I).
+pub fn random_password() -> String {
+    use rand::Rng;
+    const A: &[u8] = b"abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let mut rng = rand::thread_rng();
+    (0..8).map(|_| A[rng.gen_range(0..A.len())] as char).collect()
 }

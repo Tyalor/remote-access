@@ -28,3 +28,4 @@ directories = { workspace = true }
 if-addrs = "0.13"
 rpassword = "7"
 hostname = "0.4"
+rand = { workspace = true }

@@ -35,7 +35,18 @@ pub struct ClientConfig {
 }
 
 fn default_device_name() -> String {
-    hostname::get().ok().and_then(|h| h.into_string().ok()).unwrap_or_else(|| "remote-access client".into())
+    let raw = hostname::get().ok().and_then(|h| h.into_string().ok()).unwrap_or_default();
+    let cleaned: String = raw
+        .trim_end_matches(".local")
+        .chars()
+        .filter(|c| c.is_alphanumeric() || " -_.".contains(*c))
+        .take(48)
+        .collect();
+    if cleaned.trim().is_empty() {
+        "remote-access client".into()
+    } else {
+        cleaned
+    }
 }
 
 impl Default for ClientConfig {

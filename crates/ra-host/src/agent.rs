@@ -129,7 +129,6 @@ impl Agent {
         let reg = self.register(config_path).await?;
         let id = reg.id.clone();
         tracing::info!(%id, name = %self.cfg.name, "host online");
-        println!("Your ID: {}", pretty_id(&id));
 
         let mut last_heartbeat = Instant::now();
         let mut observed = reg.observed_addr.clone();

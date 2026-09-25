@@ -114,6 +114,9 @@ async fn main() -> Result<()> {
         }
         Cmd::Run => {
             let cfg = Config::load(&path)?;
+            if let Some(id) = &cfg.id {
+                println!("Your ID: {}", agent::pretty_id(id));
+            }
             agent::Agent::new(cfg)?.run(&path).await?;
         }
         Cmd::Clients => {
