@@ -214,6 +214,7 @@ impl ClientCertVerifier for AcceptAnyClient {
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().with_env_filter("info").init();
     let args = Arc::new(Args::parse());
+    tracing::info!("generating host RSA key…");
     let host = FakeHost::new("0000");
     let cert_pem = host.cert_pem.clone();
     let key_pem = host.key.to_pkcs8_pem(rsa::pkcs8::LineEnding::LF)?.to_string();

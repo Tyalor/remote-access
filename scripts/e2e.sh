@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 cargo build -q -p ra-rendezvous -p ra-host -p ra-client -p ra-fakehost -p ra-desk
 BIN=target/debug
 TMP=$(mktemp -d)
-trap 'kill $(jobs -p) 2>/dev/null || true; rm -rf "$TMP"' EXIT
+trap 'kill $(jobs -p) 2>/dev/null || true; [ -n "${KEEP_TMP:-}" ] && echo "logs in $TMP" || rm -rf "$TMP"' EXIT
 export RA_HOME="$TMP/client" RA_HOST_CONFIG="$TMP/host.toml" RUST_LOG=${RUST_LOG:-info}
 RV_PORT=${RV_PORT:-21999}
 GS_PORT=${GS_PORT:-47989}

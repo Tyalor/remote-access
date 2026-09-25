@@ -24,18 +24,20 @@ Upstreams are vendored as submodules under `upstream/` and forked under [Tyalor]
 
 ## Quick start
 
-Build (Rust stable):
+Download a build from [Releases](https://github.com/Tyalor/remote-access/releases), or build with Rust stable:
 
 ```sh
 git clone https://github.com/Tyalor/remote-access   # submodules optional
 cd remote-access && cargo build --release
 ```
 
-**1. Rendezvous server** (any box both sides can reach; put it behind TLS in production):
+**1. Rendezvous server** (any box both sides can reach). One command with automatic HTTPS:
 
 ```sh
-ra-rendezvous --listen 0.0.0.0:21114 --state-file /var/lib/ra/hosts.json
+RA_DOMAIN=rv.example.com docker compose up -d
 ```
+
+or bare: `ra-rendezvous --listen 0.0.0.0:21114 --state-file /var/lib/ra/hosts.json` behind your own TLS proxy.
 
 **2. Host** (Windows/Linux/macOS with [Apollo](https://github.com/ClassicOldSong/Apollo) installed):
 

@@ -1,0 +1,25 @@
+# One-command rendezvous server with automatic HTTPS.
+#   RA_DOMAIN=rv.example.com docker compose up -d
+# Point both ra-desk instances at https://rv.example.com
+services:
+  rendezvous:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ra-data:/data
+    expose:
+      - "21114"
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      RA_DOMAIN: ${RA_DOMAIN:?set RA_DOMAIN to your public hostname}
+    command: caddy reverse-proxy --from ${RA_DOMAIN} --to rendezvous:21114
+    volumes:
+      - caddy-data:/data
+volumes:
+  ra-data:
+  caddy-data:

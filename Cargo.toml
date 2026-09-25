@@ -38,3 +38,13 @@ x509-parser = "0.16"
 rsa = { version = "0.9", features = ["sha2"] }
 directories = "5"
 toml = "0.8"
+
+# RSA-2048 keygen is unusably slow unoptimized; keep the math crates fast in dev/test.
+[profile.dev.package.num-bigint-dig]
+opt-level = 3
+[profile.dev.package.rsa]
+opt-level = 3
+[profile.dev.package.aes]
+opt-level = 3
+[profile.dev.package.sha2]
+opt-level = 3

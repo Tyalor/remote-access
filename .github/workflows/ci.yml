@@ -23,3 +23,13 @@ jobs:
       - name: end-to-end (rendezvous + fake Apollo + host agent + client)
         if: runner.os != 'Windows'
         run: ./scripts/e2e.sh
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t ra-rendezvous .
+      - name: smoke
+        run: |
+          docker run -d --name rv -p 21114:21114 ra-rendezvous
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:21114/v1/health && break; sleep 1; done
+          curl -fs http://127.0.0.1:21114/v1/health

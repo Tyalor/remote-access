@@ -9,6 +9,48 @@ use tokio::task::JoinHandle;
 /// Loopback port used purely as a cross-process mutex.
 pub const LOCK_PORT: u16 = 21116;
 
+/// Where a `--headless` agent records its PID so the GUI can stop it.
+pub fn pid_file(config_path: &std::path::Path) -> std::path::PathBuf {
+    config_path.with_file_name("agent.pid")
+}
+
+/// Ask a background (`--headless`) agent to exit.
+pub fn stop_background(config_path: &std::path::Path) -> Result<()> {
+    let pf = pid_file(config_path);
+    let pid: u32 = std::fs::read_to_string(&pf)?.trim().parse()?;
+    #[cfg(unix)]
+    {
+        let out = std::process::Command::new("kill").arg(pid.to_string()).output()?;
+        anyhow::ensure!(out.status.success(), "kill {pid} failed");
+    }
+    #[cfg(windows)]
+    {
+        let out = std::process::Command::new("taskkill").args(["/PID", &pid.to_string(), "/F"]).output()?;
+        anyhow::ensure!(out.status.success(), "taskkill {pid} failed");
+    }
+    let _ = std::fs::remove_file(&pf);
+    Ok(())
+}
+
+/// Launch a detached `--headless` copy of this executable.
+pub fn spawn_background() -> Result<()> {
+    let exe = std::env::current_exe()?;
+    let mut c = std::process::Command::new(exe);
+    c.arg("--headless").stdin(std::process::Stdio::null()).stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null());
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        c.process_group(0);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        c.creation_flags(0x0000_0008 | 0x0800_0000); // DETACHED_PROCESS | CREATE_NO_WINDOW
+    }
+    c.spawn()?;
+    Ok(())
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AgentState {
     /// No host config on this machine.

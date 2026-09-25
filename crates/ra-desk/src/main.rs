@@ -535,6 +535,7 @@ impl Desk {
         if ui.checkbox(&mut auto, "Start with system (stay reachable after reboot)").changed() {
             self.toggle_autostart(auto);
         }
+        ui.label(egui::RichText::new("Closing this window keeps sharing on in the background.").weak().small());
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             match self.agent.state() {
@@ -546,6 +547,17 @@ impl Desk {
                 AgentState::Stopped | AgentState::Failed(_) => {
                     if ui.small_button("Start sharing").clicked() {
                         let _ = self.agent.start(&self.host_cfg_path);
+                    }
+                }
+                AgentState::RunningElsewhere => {
+                    if ui.small_button("Stop background sharing").clicked() {
+                        match agent_runner::stop_background(&self.host_cfg_path) {
+                            Ok(()) => {
+                                self.agent.stop();
+                                self.push_log("■ background agent stopped");
+                            }
+                            Err(e) => self.push_log(format!("✗ could not stop background agent: {e:#}")),
+                        }
                     }
                 }
                 _ => {}
@@ -736,6 +748,19 @@ impl Desk {
     fn ui_connect(&mut self, ui: &mut egui::Ui) {
         ui.heading("Control Remote Desktop");
         ui.label(egui::RichText::new("Enter the ID shown on the other PC.").weak());
+        if is_local_rendezvous(&self.cfg.rendezvous_url) {
+            ui.add_space(6.0);
+            egui::Frame::group(ui.style()).fill(egui::Color32::from_rgba_unmultiplied(231, 76, 60, 24)).show(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.colored_label(RED, "No rendezvous server configured.");
+                    ui.label("Both PCs must point at the same server —");
+                    if ui.link("open Settings").clicked() {
+                        self.settings_open = true;
+                    }
+                    ui.label("or run one with `docker compose up` from the repo.");
+                });
+            });
+        }
         ui.add_space(12.0);
         egui::Grid::new("connect").num_columns(2).spacing([12.0, 8.0]).show(ui, |ui| {
             ui.label("Remote ID");
@@ -853,6 +878,10 @@ impl Desk {
     }
 }
 
+fn is_local_rendezvous(url: &str) -> bool {
+    url.is_empty() || url.contains("127.0.0.1") || url.contains("localhost")
+}
+
 fn open_url(url: &str) -> std::io::Result<()> {
     #[cfg(target_os = "macos")]
     let mut c = { let mut c = std::process::Command::new("open"); c.arg(url); c };
@@ -864,6 +893,17 @@ fn open_url(url: &str) -> std::io::Result<()> {
 }
 
 impl eframe::App for Desk {
+    /// Closing the window must not cut off anyone: hand the agent to a
+    /// detached background process (unless the system service already runs).
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        if self.agent.state() == AgentState::Running && !self.autostart {
+            self.agent.stop();
+            if let Err(e) = agent_runner::spawn_background() {
+                tracing::warn!(error = %e, "could not hand agent to background process");
+            }
+        }
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.drain();
         self.poll_host_online(ctx.input(|i| i.time));
@@ -918,6 +958,7 @@ fn run_headless(rt: Arc<tokio::runtime::Runtime>) -> anyhow::Result<()> {
     let cfg = ra_host::Config::load(&path).map_err(|e| anyhow::anyhow!("no host config at {}: {e}", path.display()))?;
     let _lock = std::net::TcpListener::bind(("127.0.0.1", agent_runner::LOCK_PORT))
         .map_err(|_| anyhow::anyhow!("another host agent is already running on this machine"))?;
+    let _ = std::fs::write(agent_runner::pid_file(&path), std::process::id().to_string());
     if let Some(id) = &cfg.id {
         tracing::info!(id = %ra_host::pretty_id(id), "headless host agent starting");
     }

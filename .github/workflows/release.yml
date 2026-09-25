@@ -1,0 +1,52 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive: tar.gz
+          - os: macos-13
+            target: x86_64-apple-darwin
+            archive: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Linux GUI deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxkbcommon-dev libwayland-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+      - run: cargo build --release --locked --target ${{ matrix.target }} -p ra-desk -p ra-client -p ra-host -p ra-rendezvous
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist/remote-access-${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/{ra-desk,ra,ra-host,ra-rendezvous} dist/remote-access-${{ matrix.target }}/
+          cp README.md LICENSE NOTICE dist/remote-access-${{ matrix.target }}/
+          tar -C dist -czf remote-access-${{ matrix.target }}.tar.gz remote-access-${{ matrix.target }}
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/remote-access-${{ matrix.target }} | Out-Null
+          Copy-Item target/${{ matrix.target }}/release/ra-desk.exe,target/${{ matrix.target }}/release/ra.exe,target/${{ matrix.target }}/release/ra-host.exe,target/${{ matrix.target }}/release/ra-rendezvous.exe dist/remote-access-${{ matrix.target }}/
+          Copy-Item README.md,LICENSE,NOTICE dist/remote-access-${{ matrix.target }}/
+          Compress-Archive -Path dist/remote-access-${{ matrix.target }} -DestinationPath remote-access-${{ matrix.target }}.zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: remote-access-${{ matrix.target }}.*
+          generate_release_notes: true
